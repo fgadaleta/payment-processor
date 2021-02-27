@@ -26,11 +26,11 @@ fn get_first_arg() -> Result<OsString, Box<dyn Error>> {
 
 fn main() -> Result<(), Box<dyn Error>> {
     // println!("Welcome to TxProcessor!");
-    
+
     let file_path = get_first_arg()?;
     let file = File::open(file_path)?;
     let mut rdr = csv::Reader::from_reader(file);
-    
+
     // initialize bank
     let mut processor = bank::Bank::init();
 
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             held: acc.held,
             total: acc.total,
             locked: acc.locked
-        })?;  
+        })?;
     }
     Ok(())
 }
