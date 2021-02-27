@@ -45,20 +45,25 @@ impl Bank {
         let amount = tx.amount;
         let client_id = tx.client;
 
-        // add this tx to transaction vault
-        self.transactions.insert(tx_id, tx.to_owned());
-
         self.create_account(client_id);
+        let mut acc = self.accounts.get(&client_id).unwrap();
 
         match tx_type {
             TxType::Deposit => {
+                // add this tx to transaction vault
+                self.transactions.insert(tx_id, tx.to_owned());
+
                 // println!("Depositing to client {} amount {}", &client_id, &amount.unwrap());
-                let account = self.accounts.get(&client_id).unwrap().deposit(amount.unwrap());
+                // let mut acc = self.accounts.get(&client_id).unwrap();
+                let account = acc.deposit(amount.unwrap());
                 // update account in vault
                 self.accounts.insert(client_id, account);
             },
 
             TxType::Withdrawal => {
+                // add this tx to transaction vault
+                self.transactions.insert(tx_id, tx.to_owned());
+
                 // println!("Withdrawaling from client {} amount {}", &client_id, &amount.unwrap());
                 let account = self.accounts.get(&client_id).unwrap().withdrawal(amount.unwrap());
                 // update account in vault
@@ -71,32 +76,42 @@ impl Bank {
                     self.disputed_transactions.insert(client_id, Vec::new());
                 }
 
+                println!("disp tx {:?}", &self.disputed_transactions);
                 // if client_id is already disputed, push new Tx to existing vector
                 self.disputed_transactions.get_mut(&client_id).unwrap().push(tx.to_owned());
+                println!("disp tx {:?}", &self.disputed_transactions);
+                println!("self tx {:?}", &self.transactions);
 
                 // get disputed transaction amount
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
-                // reflect dispute into account balances
-                self.accounts.get(&client_id).unwrap().dispute(dt_amount);
+                // add this tx to transaction vault
+                self.transactions.insert(tx_id, tx.to_owned());
+                // self.accounts.get(&client_id).unwrap().
+                let account = acc.dispute(dt_amount);
+                self.accounts.insert(client_id, account);
+
             },
 
             TxType::Resolve => {
                 // get disputed transaction amount
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
-                self.accounts.get(&client_id).unwrap().resolve(dt_amount);
+                let account = acc.resolve(dt_amount);
+                self.accounts.insert(client_id, account);
+
+                println!("disp tx {:?}", &self.disputed_transactions);
 
                 // remove tx from disputed_transactions and client_id if empty (not really necessary)
-                let new_size = self.disputed_transactions
-                                                        .get_mut(&client_id)
-                                                        .unwrap()
-                                                        .iter()
-                                                        .position(|x| *x == tx.to_owned())
-                                                        .unwrap();
+                // let new_size = self.disputed_transactions
+                //                                         .get_mut(&client_id)
+                //                                         .unwrap()
+                //                                         .iter()
+                //                                         .position(|x| *x == tx.to_owned())
+                //                                         .unwrap();
 
-                // we can also keep client_id in the hashmap in case there are other disputed tx later
-                if new_size == 0 {
-                    self.disputed_transactions.remove(&client_id);
-                }
+                // // we can also keep client_id in the hashmap in case there are other disputed tx later
+                // if new_size == 0 {
+                //     self.disputed_transactions.remove(&client_id);
+                // }
             }
 
             _ => unimplemented!()

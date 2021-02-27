@@ -3,24 +3,24 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Account {
-    // client_id: u16, 
+    // client_id: u16,
     // total - held
     pub available: f32,
 
     // total - available
     pub held: f32,
-   
+
     // available + held
     pub total: f32,
-   
+
     // account is locked
     pub locked: bool,
 }
 
 impl Account {
     pub fn new(available: f32) -> Self {
-        // TODO validate arguments if necessary 
-            
+        // TODO validate arguments if necessary
+
         Account{
             // client_id,
             available,
@@ -34,7 +34,7 @@ impl Account {
         self.total = self.available + self.held;
     }
 
-    // deposit amount to account 
+    // deposit amount to account
     pub fn deposit(mut self, amount: f32) -> Self {
         self.available += amount;
         self.update_account();
@@ -45,7 +45,7 @@ impl Account {
         if amount <= self.available {
             self.available -= amount;
             self.update_account();
-            
+
         }
         else {
             // insufficient amount
@@ -53,16 +53,18 @@ impl Account {
         self
     }
 
-    pub fn dispute(mut self, amount: f32) {
+    pub fn dispute(mut self, amount: f32) -> Self {
         self.held += amount;
         self.available -= amount;
         self.update_account();
+        self
     }
 
-    pub fn resolve(mut self, amount: f32) {
+    pub fn resolve(mut self, amount: f32) -> Self {
         self.held -= amount;
         self.available += amount;
         self.update_account();
+        self
     }
 
 
