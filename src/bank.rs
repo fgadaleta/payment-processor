@@ -85,7 +85,7 @@ impl Bank {
                 // get disputed transaction amount
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
                 // add this tx to transaction vault
-                self.transactions.insert(tx_id, tx.to_owned());
+                // self.transactions.insert(tx_id, tx.to_owned());
                 // self.accounts.get(&client_id).unwrap().
                 let account = acc.dispute(dt_amount);
                 self.accounts.insert(client_id, account);
@@ -94,16 +94,26 @@ impl Bank {
 
             TxType::Resolve => {
                 // get disputed transaction amount
+                println!("transactions {:?}", self.transactions);
+
+
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
+                println!("amount disputed tx to resolve {:?}", dt_amount);
                 let account = acc.resolve(dt_amount);
                 self.accounts.insert(client_id, account);
 
                 println!("disp tx {:?}", &self.disputed_transactions);
 
                 // remove tx from disputed_transactions and client_id if empty (not really necessary)
-                // let new_size = self.disputed_transactions
-                //                                         .get_mut(&client_id)
-                //                                         .unwrap()
+                let dtx = self.disputed_transactions
+                                                .get_mut(&client_id)
+                                                .unwrap();
+
+                let index = dtx.iter().position(|x| x.tx == tx_id).unwrap();
+                // println!("pos to delete {:?}", index);
+                dtx.remove(index);
+                // println!("disp tx {:?}", &self.disputed_transactions);
+
                 //                                         .iter()
                 //                                         .position(|x| *x == tx.to_owned())
                 //                                         .unwrap();
