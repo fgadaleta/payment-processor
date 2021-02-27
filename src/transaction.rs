@@ -1,7 +1,8 @@
 use serde::{Serialize, Deserialize};
 
 // type of transaction
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "lowercase")]
 pub enum TxType {
     Deposit,
     Withdrawal,
@@ -10,27 +11,23 @@ pub enum TxType {
     Chargeback,
 }
 // transaction struct
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct Tx {
-    pub tx_id: u32,
     pub tx_type: TxType,
-    pub client_id: u16,
+    pub client: u16,
+    pub tx: u32,
     pub amount: Option<f32>,
 }
 
 impl Tx {
-    pub fn new(tx_id: u32, tx_type: TxType, client_id: u16, amount: Option<f32>) -> Self {
+    pub fn new(tx: u32, tx_type: TxType, client: u16, amount: Option<f32>) -> Self {
         // TODO validate arguments if necessary  
 
         Tx {
-            tx_id,
             tx_type,
-            client_id,
+            client,
+            tx,
             amount
         }
     }
-
-
-
-
 }

@@ -1,12 +1,13 @@
-use crate::account::Account;
+use crate::account::{ Account};
 use crate::transaction::{ Tx, TxType };
-use serde::{ Deserialize };
+use serde::Deserialize;
 use std::collections::HashMap;
+use std::sync::{ Mutex, MutexGuard };
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Debug)]
 pub struct Bank {
     // accounts by client_id
-    accounts: HashMap<u16, Account>,
+    accounts: Mutex<HashMap<u16, Account>>,
     // transaction vault (tx_id, Tx)
     transactions: HashMap<u32, Tx>,
     // client_id, Vec<Tx>
@@ -18,77 +19,52 @@ impl Bank {
     pub fn init() -> Self {
         
         Bank {
-            accounts: HashMap::new(),
+            accounts: Mutex::new(HashMap::new()),
             transactions: HashMap::new(),
             disputed_transactions: HashMap::new()
         }
     }
 
-    pub fn open_account(&mut self) {
-        let last_client_id = self.accounts
-                                        .iter()
-                                        .max_by(|a, b| a.0.cmp(&b.0))
-                                        .map(|(k, _v)| k)
-                                        .unwrap();
-        let client_id = *last_client_id + 1;
-        let account = Account::new(0.0);
-        self.accounts.insert(client_id, account);
-    }
-
     // create account with client_id if it does not exist already
-    // Return account 
-    pub fn create_account(&mut self, client_id: u16) -> Account {
-
-        if self.accounts.contains_key(&client_id) {
-            self.accounts.get(&client_id).unwrap().to_owned()
-        }
-
-        else {
+    pub fn create_account(&mut self, client_id: u16) {
+        let mut accounts = self.accounts.lock().unwrap();
+        
+        if !accounts.contains_key(&client_id) {
             let new_account = Account::new(0.0);
-            self.accounts.insert(client_id, new_account);
-            new_account
+            accounts.insert(client_id, new_account);
         }
     }
 
-    // loads transactions from a pool and process in order of arrival
-    // pub fn load_transactions(&self, tx_pool: Vec<Tx>) {
-    //     for tx in tx_pool.iter() {
-    //         let res = self.process(tx.clone()).unwrap();
-    //     }
-    // }
+    pub fn get_accounts(&self) -> MutexGuard<HashMap<u16, Account>>{
+        self.accounts.lock().unwrap()
+    }
 
     pub fn process(&mut self, tx: &Tx) -> Result<(), std::io::Error> {
         // TODO get transaction type and dispatch to type of operation 
         // extract transaction details
         let tx_type = tx.tx_type;
-        let tx_id = tx.tx_id;
+        let tx_id = tx.tx;
         let amount = tx.amount;
-        let client_id = tx.client_id;
+        let client_id = tx.client;
         
         // add this tx to transaction vault
         self.transactions.insert(tx_id, tx.to_owned());
-    
-        // get account from client_id
-        let account = match self.accounts.get(&client_id) {
-            Some(acc) => {
-                // TODO account with client_id exists, process transaction
-                acc.to_owned()
-            },
 
-            None => {
-                // cannot fail by design
-                self.create_account(client_id.to_owned())
-            }
-        };
+        self.create_account(client_id);
 
         match tx_type {
             TxType::Deposit => {
-                account.deposit(amount.unwrap());    
+                // println!("Depositing to client {} amount {}", &client_id, &amount.unwrap());
+                let account = self.accounts.lock().unwrap().get(&client_id).unwrap().deposit(amount.unwrap());
+                // update account in vault               
+                self.accounts.lock().unwrap().insert(client_id, account);
             },
 
             TxType::Withdrawal => {
-                let _status = account.withdrawal(amount.unwrap());
-                // TODO log insufficient funds message
+                // println!("Withdrawaling from client {} amount {}", &client_id, &amount.unwrap());
+                let account = self.accounts.lock().unwrap().get(&client_id).unwrap().withdrawal(amount.unwrap());
+                // update account in vault               
+                self.accounts.lock().unwrap().insert(client_id, account);
             },
 
             TxType::Dispute => {
@@ -103,13 +79,13 @@ impl Bank {
                 // get disputed transaction amount 
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
                 // reflect dispute into account balances
-                account.dispute(dt_amount);
+                self.accounts.lock().unwrap().get(&client_id).unwrap().dispute(dt_amount);
             },
 
             TxType::Resolve => {
                 // get disputed transaction amount 
                 let dt_amount = self.transactions.get(&tx_id).unwrap().amount.unwrap();
-                account.resolve(dt_amount);
+                self.accounts.lock().unwrap().get(&client_id).unwrap().resolve(dt_amount);
 
                 // remove tx from disputed_transactions and client_id if empty (not really necessary)
                 let new_size = self.disputed_transactions
@@ -127,7 +103,6 @@ impl Bank {
 
             _ => unimplemented!()
         }
-
 
         Ok(())
     }
