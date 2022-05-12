@@ -21,7 +21,7 @@ pub struct Tx {
 
 impl Tx {
     pub fn new(tx: u32, tx_type: TxType, client: u16, amount: Option<f32>) -> Self {
-        // TODO validate arguments if necessary  
+        // TODO validate arguments if necessary
 
         Tx {
             tx_type,
